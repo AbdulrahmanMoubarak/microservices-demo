@@ -2,13 +2,18 @@ package com.microservices.orderservice.service;
 
 import com.microservices.orderservice.model.Order;
 import com.microservices.orderservice.model.OrderLineItems;
+import com.microservices.orderservice.model.dto.InventoryResponse;
+import com.microservices.orderservice.model.dto.OrderLineItemsDto;
 import com.microservices.orderservice.model.dto.OrderRequest;
 import com.microservices.orderservice.repository.OrderRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -17,6 +22,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional
 public class OrderService {
+
+    private final WebClient webClient;
 
     private final OrderRepository orderRepository;
     public void placeOrder(OrderRequest orderRequest){
@@ -34,7 +41,27 @@ public class OrderService {
                 )
                 .build();
 
-        orderRepository.save(order);
-        log.info("Order {} saved sucessfully", order.getOrderNumber());
+        if(productsInStock(orderRequest.getOrderLineItemsDtoList().stream().map(OrderLineItemsDto::getSkuCode).collect(Collectors.toList()))){
+            orderRepository.save(order);
+            log.info("Order {} saved sucessfully", order.getOrderNumber());
+        } else {
+            throw new IllegalArgumentException("One or more products are not in stock");
+        }
+
+    }
+
+    private Boolean productsInStock(List<String> skuCodes){
+        InventoryResponse[] result = webClient.get()
+                .uri("http://localhost:9097/api/inventory",
+                        uriBuilder -> uriBuilder.queryParam("skuCodes", skuCodes).build())
+                .retrieve()
+                .bodyToMono(InventoryResponse[].class)
+                .block();
+
+        if(result == null)
+            throw new RuntimeException("Error while communicating with inventory servive");
+        else{
+            return Arrays.stream(result).allMatch(InventoryResponse::getIsInStock);
+        }
     }
 }
