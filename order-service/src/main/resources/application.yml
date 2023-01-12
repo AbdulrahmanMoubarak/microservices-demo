@@ -9,3 +9,5 @@ spring:
       ddl-auto: update
 server:
   port: 9096
+
+inventory-url: "http://localhost:9097/api/inventory"

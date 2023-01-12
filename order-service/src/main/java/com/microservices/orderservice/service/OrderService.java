@@ -7,7 +7,9 @@ import com.microservices.orderservice.model.dto.OrderLineItemsDto;
 import com.microservices.orderservice.model.dto.OrderRequest;
 import com.microservices.orderservice.repository.OrderRepository;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -18,11 +20,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class OrderService {
 
+
+    @Value("${inventory-url}")
+    private String inventoryUrl;
     private final WebClient webClient;
 
     private final OrderRepository orderRepository;
@@ -52,7 +57,7 @@ public class OrderService {
 
     private Boolean productsInStock(List<String> skuCodes){
         InventoryResponse[] result = webClient.get()
-                .uri("http://localhost:9097/api/inventory",
+                .uri(inventoryUrl,
                         uriBuilder -> uriBuilder.queryParam("skuCodes", skuCodes).build())
                 .retrieve()
                 .bodyToMono(InventoryResponse[].class)
