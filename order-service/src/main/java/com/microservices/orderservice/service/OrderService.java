@@ -28,7 +28,7 @@ public class OrderService {
 
     @Value("${inventory-url}")
     private String inventoryUrl;
-    private final WebClient webClient;
+    private final WebClient.Builder webClientBuilder;
 
     private final OrderRepository orderRepository;
     public void placeOrder(OrderRequest orderRequest){
@@ -56,7 +56,7 @@ public class OrderService {
     }
 
     private Boolean productsInStock(List<String> skuCodes){
-        InventoryResponse[] result = webClient.get()
+        InventoryResponse[] result = webClientBuilder.build().get()
                 .uri(inventoryUrl,
                         uriBuilder -> uriBuilder.queryParam("skuCodes", skuCodes).build())
                 .retrieve()
